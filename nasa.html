@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="bn" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>নাসা স্পেস অ্যাপস চ্যালেঞ্জ - ইন্টারেক্টিভ গাইড</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Chosen Palette: Dynamic Tri-color (White, Black, Dark Red) for theme switching -->
+    <!-- Application Structure Plan: The SPA now has an enhanced dashboard structure with a dynamic top bar. This top bar includes a theme switcher and a search input for filtering content. A new 3D animation section adds visual flair. The main content is still divided into interactive cards and scrollable sections, but a new "Mission" section has been added to provide more context. The footer now includes social media links. This design prioritizes dynamic interaction and visual engagement, allowing users to customize their experience and find information more efficiently. -->
+    <!-- Visualization & Content Choices: 
+        - Theme Switching: Implemented with vanilla JS, toggling classes on the body element to change the color scheme, offering a direct user-controlled aesthetic experience.
+        - Search Bar: Uses vanilla JS to filter text content on the page (headers, paragraphs) in real-time, providing an intuitive way to find specific information without page reloads.
+        - 3D Animation: A simple three.js scene with a rotating, geometric sphere and a starfield background adds an engaging, space-themed visual element, enhancing the "wow factor" and reinforcing the topic.
+        - All other content and charts are retained from the previous version, with interactions powered by Chart.js and vanilla JS, adhering to the NO SVG/Mermaid constraint. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Hind Siliguri', sans-serif; transition: background-color 0.5s, color 0.5s; }
+        .theme-white { background-color: #f5f5f4; color: #292524; }
+        .theme-white .bg-white { background-color: #ffffff; color: #292524; }
+        .theme-white .text-cyan-800 { color: #0e7490; }
+        .theme-white .text-stone-600 { color: #57534e; }
+        .theme-white .hover\\:bg-gray-100:hover { background-color: #f3f4f6; }
+        .theme-black { background-color: #121212; color: #e5e7eb; }
+        .theme-black .bg-white { background-color: #1f1f1f; color: #e5e7eb; }
+        .theme-black .text-cyan-800 { color: #22d3ee; }
+        .theme-black .text-stone-600 { color: #d1d5db; }
+        .theme-black .hover\\:bg-gray-100:hover { background-color: #2e2e2e; }
+        .theme-black .border-stone-200 { border-color: #3b3b3b; }
+        .theme-black .shadow-md { box-shadow: 0 4px 6px -1px rgba(255, 255, 255, 0.1), 0 2px 4px -1px rgba(255, 255, 255, 0.06); }
+        .theme-black .nav-card { background-color: #1f1f1f; }
+        .theme-black .bg-stone-50\\/80 { background-color: rgba(31, 31, 31, 0.8); }
+        .theme-dark-red { background-color: #3d0000; color: #e5e7eb; }
+        .theme-dark-red .bg-white { background-color: #5e0000; color: #e5e7eb; }
+        .theme-dark-red .text-cyan-800 { color: #fecaca; }
+        .theme-dark-red .text-stone-600 { color: #fca5a5; }
+        .theme-dark-red .hover\\:bg-gray-100:hover { background-color: #7f1d1d; }
+        .theme-dark-red .border-stone-200 { border-color: #7f1d1d; }
+        .theme-dark-red .shadow-md { box-shadow: 0 4px 6px -1px rgba(255, 255, 255, 0.1), 0 2px 4px -1px rgba(255, 255, 255, 0.06); }
+        .theme-dark-red .nav-card { background-color: #5e0000; }
+        .theme-dark-red .bg-stone-50\\/80 { background-color: rgba(94, 0, 0, 0.8); }
+        .chart-container { position: relative; width: 100%; max-width: 500px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 400px; } }
+        canvas#three-canvas { display: block; position: absolute; top: 0; left: 0; }
+        .three-container { position: relative; height: 300px; max-width: 100%; overflow: hidden; border-radius: 12px; }
+        .search-input:focus { outline: none; box-shadow: 0 0 0 2px #38bdf8; }
+        .social-icons a:hover { transform: scale(1.1); transition: transform 0.3s; }
+        .role-card { background-color: #f0f9ff; color: #0e7490; padding: 8px 16px; border-radius: 9999px; border: 1px solid #bae6fd; font-weight: 600; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .theme-black .role-card { background-color: #1f1f1f; color: #a5f3fc; border-color: #22d3ee; }
+        .theme-dark-red .role-card { background-color: #5e0000; color: #fecaca; border-color: #fca5a5; }
+    </style>
+</head>
+<body class="antialiased theme-white">
+
+    <header class="bg-stone-50/80 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+        <div class="container mx-auto px-6 py-4 flex flex-col md:flex-row items-center justify-between max-w-6xl">
+            <div class="flex items-center justify-between w-full md:w-auto mb-4 md:mb-0">
+                <div class="text-2xl font-bold text-cyan-800">Space Apps</div>
+                <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-moon text-stone-600"></i>
+                </button>
+            </div>
+            <nav class="w-full md:w-auto">
+                <ul class="flex flex-col md:flex-row items-center justify-center space-y-2 md:space-y-0 md:space-x-8">
+                    <li><a href="#eligibility" class="text-stone-600 hover:text-cyan-700 transition-colors duration-300 font-medium">যোগ্যতা</a></li>
+                    <li><a href="#team-formation" class="text-stone-600 hover:text-cyan-700 transition-colors duration-300 font-medium">দল গঠন</a></li>
+                    <li><a href="#requirements" class="text-stone-600 hover:text-cyan-700 transition-colors duration-300 font-medium">প্রয়োজনীয়তা</a></li>
+                    <li><a href="#judging" class="text-stone-600 hover:text-cyan-700 transition-colors duration-300 font-medium">মূল্যায়ন</a></li>
+                    <li class="w-full md:w-auto mt-4 md:mt-0">
+                        <input type="text" id="search-bar" placeholder="এখানে খুঁজুন..." class="search-input w-full md:w-48 px-4 py-2 rounded-full text-sm border border-stone-200 bg-stone-50 text-stone-700 placeholder-stone-400">
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8 md:py-16 max-w-6xl">
+
+        <section class="text-center mb-16">
+            <h1 class="text-4xl md:text-5xl font-bold text-cyan-800 mb-4">নাসা স্পেস অ্যাপস চ্যালেঞ্জ</h1>
+            <p class="text-lg md:text-xl text-stone-600 max-w-3xl mx-auto">
+                বিশ্বের সর্ববৃহৎ এই হ্যাকাথনে অংশ নেওয়ার জন্য আপনার যা যা জানা প্রয়োজন, তার একটি ইন্টারেক্টিভ গাইড। সহজেই তথ্য অন্বেষণ করুন এবং আপনার যাত্রা শুরু করুন।
+            </p>
+        </section>
+
+        <section class="mb-16">
+            <div class="three-container shadow-xl">
+                <canvas id="three-canvas"></canvas>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
+            <a href="#eligibility" class="nav-card bg-white p-6 rounded-xl shadow-md hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 text-center">
+                <div class="text-5xl mb-4">📜</div>
+                <h3 class="text-2xl font-bold text-cyan-700">যোগ্যতা</h3>
+                <p class="text-stone-500 mt-2">কারা অংশগ্রহণ করতে পারবে?</p>
+            </a>
+            <a href="#team-formation" class="nav-card bg-white p-6 rounded-xl shadow-md hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 text-center">
+                <div class="text-5xl mb-4">👥</div>
+                <h3 class="text-2xl font-bold text-cyan-700">দল গঠন</h3>
+                <p class="text-stone-500 mt-2">কিভাবে একটি শক্তিশালী দল বানাবেন?</p>
+            </a>
+            <a href="#requirements" class="nav-card bg-white p-6 rounded-xl shadow-md hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 text-center">
+                <div class="text-5xl mb-4">📋</div>
+                <h3 class="text-2xl font-bold text-cyan-700">প্রয়োজনীয় বিষয়সমূহ</h3>
+                <p class="text-stone-500 mt-2">আপনার কী কী লাগবে?</p>
+            </a>
+            <a href="#judging" class="nav-card bg-white p-6 rounded-xl shadow-md hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 text-center">
+                <div class="text-5xl mb-4">🏆</div>
+                <h3 class="text-2xl font-bold text-cyan-700">মূল্যায়ন</h3>
+                <p class="text-stone-500 mt-2">প্রজেক্ট কিভাবে বিচার করা হবে?</p>
+            </a>
+        </div>
+
+        <div class="space-y-20">
+            <section id="eligibility" class="bg-white p-8 rounded-xl shadow-lg">
+                <h2 class="text-3xl font-bold text-cyan-800 mb-6 text-center">১. অংশগ্রহণের যোগ্যতা</h2>
+                <p class="text-center text-stone-600 mb-8 max-w-2xl mx-auto">এই চ্যালেঞ্জে অংশগ্রহণের জন্য বিভিন্ন যোগ্যতা ও পটভূমির মানুষের জন্য সুযোগ রয়েছে। মূল বিষয়গুলো নিচে তুলে ধরা হলো।</p>
+                <div class="max-w-4xl mx-auto grid md:grid-cols-3 gap-8 text-center">
+                    <div class="border border-stone-200 p-6 rounded-lg">
+                        <div class="text-4xl mb-3">🎂</div>
+                        <h4 class="text-xl font-semibold mb-2">বয়সসীমা</h4>
+                        <p class="text-stone-600">কোনো নির্দিষ্ট বয়সসীমা নেই। তবে ১৮ বছরের কম বয়সীদের অভিভাবকের তত্ত্বাবধানে অংশ নিতে হবে।</p>
+                    </div>
+                    <div class="border border-stone-200 p-6 rounded-lg">
+                        <div class="text-4xl mb-3">🎓</div>
+                        <h4 class="text-xl font-semibold mb-2">শিক্ষাগত পটভূমি</h4>
+                        <p class="text-stone-600">শিক্ষার্থী, পেশাদার, বিজ্ঞানী, ডিজাইনার—সবার জন্য উন্মুক্ত। আপনার আগ্রহই মূল যোগ্যতা।</p>
+                    </div>
+                    <div class="border border-stone-200 p-6 rounded-lg">
+                        <div class="text-4xl mb-3">💡</div>
+                        <h4 class="text-xl font-semibold mb-2">দক্ষতার স্তর</h4>
+                        <p class="text-stone-600">আপনি একজন অভিজ্ঞ পেশাদার বা নতুন শিক্ষার্থী, যেই হোন না কেন, এখানে আপনার জন্য সুযোগ রয়েছে।</p>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="mission" class="bg-white p-8 rounded-xl shadow-lg">
+                <h2 class="text-3xl font-bold text-cyan-800 mb-6 text-center">মূল মিশন এবং লক্ষ্য</h2>
+                <p class="text-center text-stone-600 mb-8 max-w-2xl mx-auto">এই হ্যাকাথনের প্রধান লক্ষ্য হলো নাসার উন্মুক্ত ডেটা ব্যবহার করে পৃথিবীর ও মহাকাশের বিভিন্ন সমস্যা সমাধান করা।</p>
+                <ul class="max-w-2xl mx-auto space-y-4">
+                    <li class="flex items-center p-4 bg-stone-50 rounded-lg">
+                        <span class="text-3xl mr-4">🌎</span>
+                        <div class="text-stone-600">
+                           <span class="font-semibold text-lg text-cyan-700">পৃথিবীর জন্য সমাধান:</span> জলবায়ু পরিবর্তন, দুর্যোগ মোকাবিলা এবং টেকসই উন্নয়ন সম্পর্কিত সমস্যাগুলো সমাধান করা।
+                        </div>
+                    </li>
+                    <li class="flex items-center p-4 bg-stone-50 rounded-lg">
+                        <span class="text-3xl mr-4">🌌</span>
+                        <div class="text-stone-600">
+                            <span class="font-semibold text-lg text-cyan-700">মহাকাশের জন্য সমাধান:</span> মহাকাশ গবেষণা, নভোচারীদের জীবন এবং আন্তঃগ্রহ ভ্রমণের চ্যালেঞ্জগুলো নিয়ে কাজ করা।
+                        </div>
+                    </li>
+                </ul>
+            </section>
+
+            <section id="team-formation" class="bg-white p-8 rounded-xl shadow-lg">
+                <h2 class="text-3xl font-bold text-cyan-800 mb-8 text-center">২. দল গঠন</h2>
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <div class="text-stone-700 space-y-4">
+                        <p class="text-lg"><span class="font-bold text-cyan-700">দলের আকার:</span> একটি দলে সর্বনিম্ন ২ জন এবং সর্বোচ্চ ৬ জন সদস্য থাকতে পারে।</p>
+                        <p><span class="font-bold">দল গঠনের প্রক্রিয়া:</span> প্রথমে, সকল সদস্যকে ব্যক্তিগতভাবে নাসার অফিসিয়াল ওয়েবসাইটে নিবন্ধন করতে হবে। এরপর তারা একটি দল গঠন করতে পারবে অথবা আগে থেকে গঠিত কোনো দলে যোগ দিতে পারবে।</p>
+                        <p class="font-semibold mt-4">একটি আদর্শ দলে বিভিন্ন দক্ষতার সমন্বয় থাকা জরুরি। এটি আপনার প্রজেক্টকে সফল করতে বড় ভূমিকা রাখে।</p>
+                    </div>
+                    <div class="relative min-h-[300px] flex items-center justify-center">
+                        <div class="absolute w-32 h-32 bg-cyan-600 text-white rounded-full flex items-center justify-center text-center font-bold text-xl shadow-lg">শক্তিশালী<br>দল</div>
+                        <div class="role-card absolute" style="transform: translate(-120px, -100px);">প্রোগ্রামার</div>
+                        <div class="role-card absolute" style="transform: translate(120px, -100px);">ডিজাইনার</div>
+                        <div class="role-card absolute" style="transform: translate(-140px, 80px);">ডেটা অ্যানালিস্ট</div>
+                        <div class="role-card absolute" style="transform: translate(140px, 80px);">গবেষক</div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="requirements" class="bg-white p-8 rounded-xl shadow-lg">
+                <h2 class="text-3xl font-bold text-cyan-800 mb-6 text-center">৩. অংশগ্রহণের জন্য প্রয়োজনীয় বিষয়সমূহ</h2>
+                <ul class="max-w-2xl mx-auto space-y-4">
+                    <li class="flex items-center p-4 bg-stone-50 rounded-lg">
+                        <span class="text-3xl mr-4">💻</span>
+                        <div>
+                            <h4 class="font-semibold text-lg">প্রযুক্তিগত সরঞ্জাম</h4>
+                            <p class="text-stone-600">একটি কম্পিউটার বা ল্যাপটপ এবং স্থিতিশীল ইন্টারনেট সংযোগ।</p>
+                        </div>
+                    </li>
+                    <li class="flex items-center p-4 bg-stone-50 rounded-lg">
+                        <span class="text-3xl mr-4">🧠</span>
+                        <div>
+                            <h4 class="font-semibold text-lg">সৃজনশীলতা ও আগ্রহ</h4>
+                            <p class="text-stone-600">নতুন কিছু করার ইচ্ছা এবং সমস্যা সমাধানের মানসিকতা সবচেয়ে গুরুত্বপূর্ণ।</p>
+                        </div>
+                    </li>
+                     <li class="flex items-center p-4 bg-stone-50 rounded-lg">
+                        <span class="text-3xl mr-4">⏰</span>
+                        <div>
+                            <h4 class="font-semibold text-lg">সময়</h4>
+                            <p class="text-stone-600">এটি একটি ৪৮ ঘণ্টার হ্যাকাথন, তাই সময়ের প্রতি মনোযোগ দিতে হবে।</p>
+                        </div>
+                    </li>
+                    <li class="flex items-center p-4 bg-stone-50 rounded-lg">
+                        <span class="text-3xl mr-4">🛰️</span>
+                        <div>
+                            <h4 class="font-semibold text-lg">নাসার ডেটা</h4>
+                            <p class="text-stone-600">চ্যালেঞ্জগুলো মূলত নাসার উন্মুক্ত ডেটা ও রিসোর্স ব্যবহার করে সমাধান করতে হবে।</p>
+                        </div>
+                    </li>
+                </ul>
+            </section>
+
+            <section id="judging" class="bg-white p-8 rounded-xl shadow-lg">
+                <h2 class="text-3xl font-bold text-cyan-800 mb-2 text-center">৪. মূল্যায়নের মানদণ্ড</h2>
+                <p class="text-center text-stone-600 mb-8 max-w-2xl mx-auto">আপনার প্রজেক্টের সাফল্য চারটি প্রধান বিষয়ের উপর নির্ভর করে। এই চারটি মানদণ্ড সমানভাবে গুরুত্বপূর্ণ।</p>
+                <div class="chart-container">
+                    <canvas id="judgingChart"></canvas>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <footer class="text-center py-8 mt-12 border-t border-stone-200">
+        <div class="flex justify-center space-x-6 social-icons mb-4">
+            <a href="https://www.facebook.com/spaceappschallenge/" target="_blank" class="text-stone-600 hover:text-cyan-700"><i class="fab fa-facebook fa-2x"></i></a>
+            <a href="https://twitter.com/SpaceApps" target="_blank" class="text-stone-600 hover:text-cyan-700"><i class="fab fa-twitter fa-2x"></i></a>
+            <a href="https://www.instagram.com/nasa_spaceapps/" target="_blank" class="text-stone-600 hover:text-cyan-700"><i class="fab fa-instagram fa-2x"></i></a>
+            <a href="https://github.com/nasa-space-apps-challenge" target="_blank" class="text-stone-600 hover:text-cyan-700"><i class="fab fa-github fa-2x"></i></a>
+        </div>
+        <p class="text-stone-500">নাসা স্পেস অ্যাপস চ্যালেঞ্জের জন্য একটি ইন্টারেক্টিভ গাইড।</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const navLinks = document.querySelectorAll('a[href^="#"]');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    let targetId = this.getAttribute('href');
+                    let targetElement = document.querySelector(targetId);
+                    if (targetElement) {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+
+            // Theme toggle logic
+            const themeToggleBtn = document.getElementById('theme-toggle');
+            const body = document.body;
+            const themes = ['theme-white', 'theme-black', 'theme-dark-red'];
+            let currentThemeIndex = 0;
+
+            const updateThemeIcon = (themeClass) => {
+                const icon = themeToggleBtn.querySelector('i');
+                if (themeClass === 'theme-white') {
+                    icon.className = 'fas fa-moon text-stone-600';
+                } else if (themeClass === 'theme-black') {
+                    icon.className = 'fas fa-sun text-yellow-500';
+                } else {
+                    icon.className = 'fas fa-fire text-red-400';
+                }
+            };
+            
+            themeToggleBtn.addEventListener('click', () => {
+                body.classList.remove(themes[currentThemeIndex]);
+                currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+                body.classList.add(themes[currentThemeIndex]);
+                updateThemeIcon(themes[currentThemeIndex]);
+            });
+
+            // Search bar logic
+            const searchBar = document.getElementById('search-bar');
+            searchBar.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const contentSections = document.querySelectorAll('main h2, main h3, main p, main li, .role-card');
+                contentSections.forEach(el => {
+                    const originalText = el.textContent || el.innerText;
+                    if (query === '' || originalText.toLowerCase().includes(query)) {
+                        el.style.display = '';
+                    } else {
+                        el.style.display = 'none';
+                    }
+                });
+            });
+
+            // Judging chart
+            const ctx = document.getElementById('judgingChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: [
+                        'প্রভাব (Impact)',
+                        'সৃজনশীলতা (Creativity)',
+                        'প্রাসঙ্গিকতা (Relevance)',
+                        'প্রযুক্তিগত দক্ষতা (Technical Skill)'
+                    ],
+                    datasets: [{
+                        label: 'মূল্যায়ন',
+                        data: [10, 10, 10, 10],
+                        fill: true,
+                        backgroundColor: 'rgba(17, 94, 89, 0.2)',
+                        borderColor: 'rgb(17, 94, 89)',
+                        pointBackgroundColor: 'rgb(17, 94, 89)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(17, 94, 89)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            angleLines: { color: 'rgba(41, 37, 36, 0.2)' },
+                            grid: { color: 'rgba(41, 37, 36, 0.2)' },
+                            pointLabels: {
+                                font: { size: 14, family: "'Hind Siliguri', sans-serif" },
+                                color: '#292524'
+                            },
+                            ticks: { display: false }
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Three.js 3D animation
+            const scene = new THREE.Scene();
+            const canvas = document.getElementById('three-canvas');
+            const container = document.querySelector('.three-container');
+            const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+
+            const geometry = new THREE.IcosahedronGeometry(2, 0);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x0e7490,
+                emissive: 0x003333,
+                shininess: 10,
+                specular: 0x999999
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+
+            const ambientLight = new THREE.AmbientLight(0x404040, 5);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 5, 5).normalize();
+            scene.add(directionalLight);
+
+            camera.position.z = 5;
+
+            const stars = new THREE.BufferGeometry();
+            const starVertices = [];
+            for (let i = 0; i < 500; i++) {
+                const x = THREE.MathUtils.randFloatSpread(200);
+                const y = THREE.MathUtils.randFloatSpread(200);
+                const z = THREE.MathUtils.randFloatSpread(200);
+                starVertices.push(x, y, z);
+            }
+            stars.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.5 });
+            const starField = new THREE.Points(stars, starMaterial);
+            scene.add(starField);
+
+            const animate = () => {
+                requestAnimationFrame(animate);
+                mesh.rotation.x += 0.005;
+                mesh.rotation.y += 0.005;
+                renderer.render(scene, camera);
+            };
+            animate();
+
+            const onResize = () => {
+                const width = container.clientWidth;
+                const height = container.clientHeight;
+                renderer.setSize(width, height);
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+            };
+            window.addEventListener('resize', onResize, false);
+            onResize();
+        });
+    </script>
+
+</body>
+</html>
